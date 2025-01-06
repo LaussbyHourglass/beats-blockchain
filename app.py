@@ -88,7 +88,19 @@ blockchain = BeatCoinBlockchain()
 # Interface do Streamlit
 st.title("BEATS Blockchain")
 
-menu = st.sidebar.selectbox("Menu", ["Adicionar Transação", "Minerar Bloco", "Visualizar Blockchain", "Validar Blockchain"])
+menu = st.sidebar.selectbox(
+    "Menu",
+    [
+        "Adicionar Transação",
+        "Minerar Bloco",
+        "Visualizar Blockchain",
+        "Validar Blockchain",
+        "Histórico de Transações",
+        "Estatísticas do Blockchain",
+        "Simular Blockchain Inválido",
+        "Reiniciar Blockchain",
+    ],
+)
 
 # Aba: Adicionar Transação
 if menu == "Adicionar Transação":
@@ -127,8 +139,8 @@ elif menu == "Visualizar Blockchain":
     st.header("Blockchain")
     
     # Exibe as transações pendentes
+    st.subheader("Transações Pendentes")
     if len(blockchain.pending_transactions) > 0:
-        st.subheader("Transações Pendentes")
         for tx in blockchain.pending_transactions:
             st.write(f"- {tx}")
     else:
@@ -157,3 +169,54 @@ elif menu == "Validar Blockchain":
         st.success("O blockchain é válido!")
     else:
         st.error("O blockchain não é válido!")
+
+# Aba: Histórico de Transações
+elif menu == "Histórico de Transações":
+    st.header("Histórico de Transações")
+    st.subheader("Transações Pendentes")
+    if len(blockchain.pending_transactions) > 0:
+        for tx in blockchain.pending_transactions:
+            st.write(f"- {tx}")
+    else:
+        st.write("Nenhuma transação pendente no momento.")
+    st.subheader("Transações Mineradas")
+    for block in blockchain.chain:
+        if block.index != 0:  # Ignorar bloco Gênesis
+            for tx in block.transactions:
+                st.write(f"- {tx}")
+
+# Aba: Estatísticas do Blockchain
+elif menu == "Estatísticas do Blockchain":
+    st.header("Estatísticas do Blockchain")
+    total_blocks = len(blockchain.chain)
+    total_transactions = sum(len(block.transactions) for block in blockchain.chain)
+    total_reward = sum(
+        tx.amount for block in blockchain.chain for tx in block.transactions if tx.sender == "System"
+    )
+    last_miner = blockchain.chain[-1].transactions[-1].recipient if len(blockchain.chain) > 1 else "Nenhum"
+
+    st.write(f"**Blocos Minerados:** {total_blocks}")
+    st.write(f"**Transações Realizadas:** {total_transactions}")
+    st.write(f"**Recompensa Total aos Mineradores:** {total_reward} BEAT")
+    st.write(f"**Último Minerador:** {last_miner}")
+
+# Aba: Simular Blockchain Inválido
+elif menu == "Simular Blockchain Inválido":
+    st.header("Simular Blockchain Inválido")
+    if len(blockchain.chain) > 1:
+        block_to_tamper = st.selectbox("Selecione o Bloco para Alterar:", range(1, len(blockchain.chain)))
+        tampered_data = st.text_area("Dados Falsos para o Bloco:")
+        if st.button("Alterar Bloco"):
+            blockchain.chain[block_to_tamper].transactions[0].description = tampered_data
+            blockchain.chain[block_to_tamper].hash = blockchain.chain[block_to_tamper].calculate_hash()
+            st.warning(f"O bloco {block_to_tamper} foi alterado. O blockchain agora pode estar inválido!")
+    else:
+        st.write("Nenhum bloco disponível para alteração.")
+
+# Aba: Reiniciar Blockchain
+elif menu == "Reiniciar Blockchain":
+    st.header("Reiniciar Blockchain")
+    if st.button("Reiniciar Blockchain"):
+        blockchain.chain = [blockchain.create_genesis_block()]
+        blockchain.pending_transactions = []
+        st.success("Blockchain reiniciado com sucesso!")
