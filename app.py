@@ -86,7 +86,7 @@ if "blockchain" not in st.session_state:
     st.session_state.blockchain = Blockchain()
 
 # --- Streamlit App ---
-st.title("BEATS Blockchain: Chia-Inspired Model")
+st.title("BEATS Blockchain")
 
 menu = st.sidebar.selectbox(
     "Menu",
