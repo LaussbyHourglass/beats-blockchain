@@ -1,6 +1,7 @@
 import streamlit as st
 import hashlib
 import time
+import uuid
 
 
 # Classes para o Blockchain
@@ -81,6 +82,11 @@ class BeatCoinBlockchain:
 # Inicializa o blockchain
 blockchain = BeatCoinBlockchain()
 
+# Gerar o identificador do minerador
+miner_id = str(uuid.uuid4())
+st.sidebar.title("Minerador")
+st.sidebar.write(f"Seu código de minerador: `{miner_id}`")
+
 
 # Interface do Streamlit
 st.title("BEATS Blockchain")
@@ -105,35 +111,40 @@ if menu == "Adicionar Transação":
 # Aba: Minerar Bloco
 elif menu == "Minerar Bloco":
     st.header("Minerar Bloco")
-    miner_address = st.text_input("Endereço do Minerador:")
+    st.write(f"Seu código de minerador: `{miner_id}`")
     if st.button("Minerar"):
-        if miner_address:
-            success = blockchain.mine_pending_transactions(miner_address)
-            if success:
-                st.success("Bloco minerado com sucesso!")
-            else:
-                st.warning("Nenhuma transação pendente para minerar.")
+        success = blockchain.mine_pending_transactions(miner_id)
+        if success:
+            st.success("Bloco minerado com sucesso! As transações pendentes foram incluídas no blockchain.")
         else:
-            st.error("Por favor, insira o endereço do minerador.")
+            st.warning("Nenhuma transação pendente para minerar.")
 
 # Aba: Visualizar Blockchain
 elif menu == "Visualizar Blockchain":
     st.header("Blockchain")
-    if len(blockchain.chain) == 0:
-        st.warning("O blockchain está vazio!")
+    
+    # Exibe as transações pendentes
+    if len(blockchain.pending_transactions) > 0:
+        st.subheader("Transações Pendentes")
+        for tx in blockchain.pending_transactions:
+            st.write(f"- {tx}")
     else:
-        for block in blockchain.chain:
-            st.subheader(f"Bloco {block.index}")
-            st.write(f"Timestamp: {block.timestamp}")
-            st.write(f"Hash: {block.hash}")
-            st.write(f"Hash Anterior: {block.previous_hash}")
-            st.write("Transações:")
-            if len(block.transactions) > 0:
-                for tx in block.transactions:
-                    st.write(f"- {tx}")
-            else:
-                st.write("Nenhuma transação neste bloco.")
-            st.write("---")
+        st.write("Nenhuma transação pendente no momento.")
+    
+    # Exibe os blocos do blockchain
+    st.subheader("Blocos")
+    for block in blockchain.chain:
+        st.subheader(f"Bloco {block.index}")
+        st.write(f"Timestamp: {block.timestamp}")
+        st.write(f"Hash: {block.hash}")
+        st.write(f"Hash Anterior: {block.previous_hash}")
+        st.write("Transações:")
+        if len(block.transactions) > 0:
+            for tx in block.transactions:
+                st.write(f"- {tx}")
+        else:
+            st.write("Nenhuma transação neste bloco.")
+        st.write("---")
 
 # Aba: Validar Blockchain
 elif menu == "Validar Blockchain":
