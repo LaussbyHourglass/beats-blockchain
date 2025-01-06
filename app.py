@@ -3,8 +3,7 @@ import hashlib
 import time
 
 
-# Blockchain Classes (Transaction, Block, BeatCoinBlockchain)
-
+# Classes para o Blockchain
 class Transaction:
     def __init__(self, sender, recipient, amount, description=""):
         self.sender = sender
@@ -60,10 +59,13 @@ class BeatCoinBlockchain:
         self.pending_transactions.append(transaction)
 
     def mine_pending_transactions(self, miner_address):
+        if len(self.pending_transactions) == 0:
+            return False
         new_block = Block(len(self.chain), time.time(), self.pending_transactions, self.get_latest_block().hash)
         new_block.mine_block(self.difficulty)
         self.chain.append(new_block)
         self.pending_transactions = [Transaction("System", miner_address, self.reward)]
+        return True
 
     def is_chain_valid(self):
         for i in range(1, len(self.chain)):
@@ -76,15 +78,16 @@ class BeatCoinBlockchain:
         return True
 
 
-# Inicializando o blockchain
+# Inicializa o blockchain
 blockchain = BeatCoinBlockchain()
 
 
-# Streamlit Interface
+# Interface do Streamlit
 st.title("BEATS Blockchain")
 
 menu = st.sidebar.selectbox("Menu", ["Adicionar Transação", "Minerar Bloco", "Visualizar Blockchain", "Validar Blockchain"])
 
+# Aba: Adicionar Transação
 if menu == "Adicionar Transação":
     st.header("Adicionar Transação")
     sender = st.text_input("Remetente:")
@@ -97,30 +100,42 @@ if menu == "Adicionar Transação":
             blockchain.add_transaction(transaction)
             st.success("Transação adicionada com sucesso!")
         else:
-            st.error("Por favor, preencha todos os campos.")
+            st.error("Por favor, preencha todos os campos corretamente.")
 
+# Aba: Minerar Bloco
 elif menu == "Minerar Bloco":
     st.header("Minerar Bloco")
     miner_address = st.text_input("Endereço do Minerador:")
     if st.button("Minerar"):
         if miner_address:
-            blockchain.mine_pending_transactions(miner_address)
-            st.success("Bloco minerado com sucesso!")
+            success = blockchain.mine_pending_transactions(miner_address)
+            if success:
+                st.success("Bloco minerado com sucesso!")
+            else:
+                st.warning("Nenhuma transação pendente para minerar.")
         else:
             st.error("Por favor, insira o endereço do minerador.")
 
+# Aba: Visualizar Blockchain
 elif menu == "Visualizar Blockchain":
     st.header("Blockchain")
-    for block in blockchain.chain:
-        st.subheader(f"Bloco {block.index}")
-        st.write(f"Timestamp: {block.timestamp}")
-        st.write(f"Hash: {block.hash}")
-        st.write(f"Hash Anterior: {block.previous_hash}")
-        st.write("Transações:")
-        for tx in block.transactions:
-            st.write(f"- {tx}")
-        st.write("---")
+    if len(blockchain.chain) == 0:
+        st.warning("O blockchain está vazio!")
+    else:
+        for block in blockchain.chain:
+            st.subheader(f"Bloco {block.index}")
+            st.write(f"Timestamp: {block.timestamp}")
+            st.write(f"Hash: {block.hash}")
+            st.write(f"Hash Anterior: {block.previous_hash}")
+            st.write("Transações:")
+            if len(block.transactions) > 0:
+                for tx in block.transactions:
+                    st.write(f"- {tx}")
+            else:
+                st.write("Nenhuma transação neste bloco.")
+            st.write("---")
 
+# Aba: Validar Blockchain
 elif menu == "Validar Blockchain":
     st.header("Validar Blockchain")
     is_valid = blockchain.is_chain_valid()
