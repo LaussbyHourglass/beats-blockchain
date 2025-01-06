@@ -86,22 +86,26 @@ class BeatCoinBlockchain:
 # Inicializa o blockchain
 blockchain = BeatCoinBlockchain()
 
-# Lista de mineradores registrados
-registered_miners = {}
+# Armazenamento dos mineradores no session_state
+if "registered_miners" not in st.session_state:
+    st.session_state.registered_miners = {}
+
+if "current_user" not in st.session_state:
+    st.session_state.current_user = None
 
 
 # Funções de registro e login
 def register_miner(username, password):
-    if username in registered_miners:
+    if username in st.session_state.registered_miners:
         return False, "Usuário já existe."
-    registered_miners[username] = hashlib.sha256(password.encode()).hexdigest()
+    st.session_state.registered_miners[username] = hashlib.sha256(password.encode()).hexdigest()
     return True, "Usuário registrado com sucesso."
 
 
 def login_miner(username, password):
-    if username not in registered_miners:
+    if username not in st.session_state.registered_miners:
         return False, "Usuário não encontrado."
-    if registered_miners[username] != hashlib.sha256(password.encode()).hexdigest():
+    if st.session_state.registered_miners[username] != hashlib.sha256(password.encode()).hexdigest():
         return False, "Senha incorreta."
     return True, "Login realizado com sucesso."
 
@@ -109,7 +113,6 @@ def login_miner(username, password):
 # Interface do Streamlit
 st.title("BEATS Blockchain")
 
-# Aba para registro e login
 menu = st.sidebar.selectbox(
     "Menu",
     [
@@ -148,7 +151,7 @@ elif menu == "Login Minerador":
     if st.button("Login"):
         success, message = login_miner(username, password)
         if success:
-            st.session_state["current_user"] = username
+            st.session_state.current_user = username
             st.success(message)
         else:
             st.error(message)
@@ -160,7 +163,6 @@ elif menu == "Mineração Inicial":
     else:
         st.header("Mineração Inicial")
         if st.button("Iniciar Mineração Inicial"):
-            # Transação inicial para dar BEATs ao minerador
             initial_transaction = Transaction("System", current_user, 100, "Mineração Inicial")
             blockchain.add_transaction(initial_transaction)
             success = blockchain.mine_pending_transactions(current_user)
@@ -202,16 +204,12 @@ elif menu == "Minerar Bloco":
 # Aba: Visualizar Blockchain
 elif menu == "Visualizar Blockchain":
     st.header("Blockchain")
-    
-    # Exibe as transações pendentes
     st.subheader("Transações Pendentes")
     if len(blockchain.pending_transactions) > 0:
         for tx in blockchain.pending_transactions:
             st.write(f"- {tx}")
     else:
         st.write("Nenhuma transação pendente no momento.")
-    
-    # Exibe os blocos do blockchain
     st.subheader("Blocos Minerados")
     for block in blockchain.chain:
         st.subheader(f"Bloco {block.index}")
@@ -222,5 +220,3 @@ elif menu == "Visualizar Blockchain":
         for tx in block.transactions:
             st.write(f"- {tx}")
         st.write("---")
-
-# Outras abas como "Histórico de Transações", "Estatísticas", "Validar Blockchain", e "Reiniciar Blockchain" permanecem inalteradas.
