@@ -1,7 +1,6 @@
 import streamlit as st
 import hashlib
 import time
-import uuid
 
 
 # Classes para o Blockchain
@@ -62,13 +61,13 @@ class BeatCoinBlockchain:
             return True
         return False
 
-    def mine_pending_transactions(self, miner_address):
+    def mine_pending_transactions(self, miner_name):
         if len(self.pending_transactions) == 0:
             return False
         new_block = Block(len(self.chain), time.time(), self.pending_transactions[:], self.get_latest_block().hash)
         new_block.mine_block(self.difficulty)
         self.chain.append(new_block)
-        self.pending_transactions = [Transaction("System", miner_address, self.reward)]
+        self.pending_transactions = [Transaction("System", miner_name, self.reward)]
         return True
 
     def is_chain_valid(self):
@@ -84,11 +83,6 @@ class BeatCoinBlockchain:
 
 # Inicializa o blockchain
 blockchain = BeatCoinBlockchain()
-
-# Gerar o identificador do minerador
-miner_id = str(uuid.uuid4())
-st.sidebar.title("Minerador")
-st.sidebar.write(f"Seu código único de minerador (para uso): `{miner_id}`")
 
 
 # Interface do Streamlit
@@ -117,17 +111,16 @@ if menu == "Adicionar Transação":
 # Aba: Minerar Bloco
 elif menu == "Minerar Bloco":
     st.header("Minerar Bloco")
-    st.write(f"Seu código de minerador: `{miner_id}`")
-    miner_address = st.text_input("Insira o endereço do minerador:")
+    miner_name = st.text_input("Nome do Minerador:")
     if st.button("Minerar"):
-        if miner_address:
-            success = blockchain.mine_pending_transactions(miner_address)
+        if miner_name:
+            success = blockchain.mine_pending_transactions(miner_name)
             if success:
                 st.success("Bloco minerado com sucesso! As transações pendentes foram incluídas no blockchain.")
             else:
                 st.warning("Nenhuma transação pendente para minerar.")
         else:
-            st.error("Por favor, insira o endereço do minerador.")
+            st.error("Por favor, insira o nome do minerador.")
 
 # Aba: Visualizar Blockchain
 elif menu == "Visualizar Blockchain":
