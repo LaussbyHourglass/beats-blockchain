@@ -136,7 +136,7 @@ elif menu == "Visualizar Blockchain":
         st.write("Nenhuma transação pendente no momento.")
     
     # Exibe os blocos do blockchain
-    st.subheader("Blocos")
+    st.subheader("Blocos Minerados")
     for block in blockchain.chain:
         st.subheader(f"Bloco {block.index}")
         st.write(f"Timestamp: {block.timestamp}")
