@@ -85,7 +85,7 @@ blockchain = BeatCoinBlockchain()
 # Gerar o identificador do minerador
 miner_id = str(uuid.uuid4())
 st.sidebar.title("Minerador")
-st.sidebar.write(f"Seu código de minerador: `{miner_id}`")
+st.sidebar.write(f"Seu código único de minerador (para uso): `{miner_id}`")
 
 
 # Interface do Streamlit
@@ -112,12 +112,16 @@ if menu == "Adicionar Transação":
 elif menu == "Minerar Bloco":
     st.header("Minerar Bloco")
     st.write(f"Seu código de minerador: `{miner_id}`")
+    miner_address = st.text_input("Insira o endereço do minerador:")
     if st.button("Minerar"):
-        success = blockchain.mine_pending_transactions(miner_id)
-        if success:
-            st.success("Bloco minerado com sucesso! As transações pendentes foram incluídas no blockchain.")
+        if miner_address:
+            success = blockchain.mine_pending_transactions(miner_address)
+            if success:
+                st.success("Bloco minerado com sucesso! As transações pendentes foram incluídas no blockchain.")
+            else:
+                st.warning("Nenhuma transação pendente para minerar.")
         else:
-            st.warning("Nenhuma transação pendente para minerar.")
+            st.error("Por favor, insira o endereço do minerador.")
 
 # Aba: Visualizar Blockchain
 elif menu == "Visualizar Blockchain":
