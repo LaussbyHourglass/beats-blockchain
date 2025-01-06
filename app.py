@@ -19,7 +19,7 @@ class Transaction:
         return hashlib.sha256(tx_data.encode()).hexdigest()
 
     def __str__(self):
-        return f"{self.sender} -> {self.recipient}: {self.amount} BEAT | {self.description}"
+        return f"{self.sender} → {self.recipient}: {self.amount} BEAT | {self.description}"
 
 
 class Block:
@@ -57,12 +57,15 @@ class BeatCoinBlockchain:
         return self.chain[-1]
 
     def add_transaction(self, transaction):
-        self.pending_transactions.append(transaction)
+        if transaction.sender and transaction.recipient and transaction.amount > 0:
+            self.pending_transactions.append(transaction)
+            return True
+        return False
 
     def mine_pending_transactions(self, miner_address):
         if len(self.pending_transactions) == 0:
             return False
-        new_block = Block(len(self.chain), time.time(), self.pending_transactions, self.get_latest_block().hash)
+        new_block = Block(len(self.chain), time.time(), self.pending_transactions[:], self.get_latest_block().hash)
         new_block.mine_block(self.difficulty)
         self.chain.append(new_block)
         self.pending_transactions = [Transaction("System", miner_address, self.reward)]
@@ -103,8 +106,11 @@ if menu == "Adicionar Transação":
     if st.button("Adicionar Transação"):
         if sender and recipient and amount > 0:
             transaction = Transaction(sender, recipient, amount, description)
-            blockchain.add_transaction(transaction)
-            st.success("Transação adicionada com sucesso!")
+            added = blockchain.add_transaction(transaction)
+            if added:
+                st.success("Transação adicionada com sucesso!")
+            else:
+                st.error("Erro ao adicionar transação.")
         else:
             st.error("Por favor, preencha todos os campos corretamente.")
 
