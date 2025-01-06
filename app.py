@@ -1,11 +1,12 @@
 import streamlit as st
 import hashlib
 import time
+from typing import List
 
 
-# Classes para o Blockchain
+# --- Core Blockchain Classes ---
 class Transaction:
-    def __init__(self, sender, recipient, amount, description=""):
+    def __init__(self, sender: str, recipient: str, amount: float, description: str = ""):
         self.sender = sender
         self.recipient = recipient
         self.amount = amount
@@ -22,9 +23,9 @@ class Transaction:
 
 
 class Block:
-    def __init__(self, index, timestamp, transactions, previous_hash):
+    def __init__(self, index: int, transactions: List[Transaction], previous_hash: str):
         self.index = index
-        self.timestamp = timestamp
+        self.timestamp = time.time()
         self.transactions = transactions
         self.previous_hash = previous_hash
         self.nonce = 0
@@ -35,41 +36,39 @@ class Block:
         value = f"{self.index}{self.timestamp}{transactions_str}{self.previous_hash}{self.nonce}"
         return hashlib.sha256(value.encode()).hexdigest()
 
-    def mine_block(self, difficulty):
+    def mine_block(self, difficulty: int):
         target = "0" * difficulty
         while self.hash[:difficulty] != target:
             self.nonce += 1
             self.hash = self.calculate_hash()
 
 
-class BeatCoinBlockchain:
-    def __init__(self, difficulty=3, reward=50):
-        self.chain = [self.create_genesis_block()]
+class Blockchain:
+    def __init__(self, difficulty: int = 3, reward: float = 50):
+        self.chain: List[Block] = [self.create_genesis_block()]
+        self.pending_transactions: List[Transaction] = []
         self.difficulty = difficulty
         self.reward = reward
-        self.pending_transactions = []
 
     def create_genesis_block(self):
-        return Block(0, time.time(), [Transaction("System", "Genesis", 0)], "0")
+        return Block(0, [Transaction("System", "Genesis", 0)], "0")
 
     def get_latest_block(self):
         return self.chain[-1]
 
-    def add_transaction(self, transaction):
+    def add_transaction(self, transaction: Transaction):
         if transaction.sender and transaction.recipient and transaction.amount > 0:
             self.pending_transactions.append(transaction)
             return True
         return False
 
-    def mine_pending_transactions(self, miner_name):
+    def mine_pending_transactions(self, miner_address: str):
         if len(self.pending_transactions) == 0:
             return False
-        # Cria um novo bloco com as transações pendentes
-        new_block = Block(len(self.chain), time.time(), self.pending_transactions[:], self.get_latest_block().hash)
+        new_block = Block(len(self.chain), self.pending_transactions[:], self.get_latest_block().hash)
         new_block.mine_block(self.difficulty)
         self.chain.append(new_block)
-        # Adiciona a recompensa ao minerador como nova transação pendente
-        self.pending_transactions = [Transaction("System", miner_name, self.reward)]
+        self.pending_transactions = [Transaction("System", miner_address, self.reward)]
         return True
 
     def is_chain_valid(self):
@@ -82,134 +81,53 @@ class BeatCoinBlockchain:
                 return False
         return True
 
+# --- Persistent State ---
+if "blockchain" not in st.session_state:
+    st.session_state.blockchain = Blockchain()
 
-# Inicializa o blockchain
-blockchain = BeatCoinBlockchain()
-
-# Armazenamento dos mineradores no session_state
-if "registered_miners" not in st.session_state:
-    st.session_state.registered_miners = {}
-
-if "current_user" not in st.session_state:
-    st.session_state.current_user = None
-
-
-# Funções de registro e login
-def register_miner(username, password):
-    if username in st.session_state.registered_miners:
-        return False, "Usuário já existe."
-    st.session_state.registered_miners[username] = hashlib.sha256(password.encode()).hexdigest()
-    return True, "Usuário registrado com sucesso."
-
-
-def login_miner(username, password):
-    if username not in st.session_state.registered_miners:
-        return False, "Usuário não encontrado."
-    if st.session_state.registered_miners[username] != hashlib.sha256(password.encode()).hexdigest():
-        return False, "Senha incorreta."
-    return True, "Login realizado com sucesso."
-
-
-# Interface do Streamlit
-st.title("BEATS Blockchain")
+# --- Streamlit App ---
+st.title("BEATS Blockchain: Chia-Inspired Model")
 
 menu = st.sidebar.selectbox(
     "Menu",
     [
-        "Registrar Minerador",
-        "Login Minerador",
-        "Mineração Inicial",
         "Adicionar Transação",
         "Minerar Bloco",
         "Visualizar Blockchain",
-        "Histórico de Transações",
-        "Estatísticas do Blockchain",
+        "Estatísticas",
         "Validar Blockchain",
-        "Reiniciar Blockchain",
     ],
 )
 
-current_user = st.session_state.get("current_user", None)
+blockchain = st.session_state.blockchain
 
-# Aba: Registrar Minerador
-if menu == "Registrar Minerador":
-    st.header("Registrar Minerador")
-    username = st.text_input("Nome de Usuário:")
-    password = st.text_input("Senha:", type="password")
-    if st.button("Registrar"):
-        success, message = register_miner(username, password)
-        if success:
-            st.success(message)
+# --- Menu: Adicionar Transação ---
+if menu == "Adicionar Transação":
+    st.header("Adicionar Transação")
+    sender = st.text_input("Remetente:")
+    recipient = st.text_input("Destinatário:")
+    amount = st.number_input("Valor:", min_value=0.01, step=0.01)
+    description = st.text_area("Descrição:")
+    if st.button("Adicionar Transação"):
+        transaction = Transaction(sender, recipient, amount, description)
+        if blockchain.add_transaction(transaction):
+            st.success("Transação adicionada com sucesso!")
         else:
-            st.error(message)
+            st.error("Erro ao adicionar transação. Verifique os dados.")
 
-# Aba: Login Minerador
-elif menu == "Login Minerador":
-    st.header("Login Minerador")
-    username = st.text_input("Nome de Usuário:")
-    password = st.text_input("Senha:", type="password")
-    if st.button("Login"):
-        success, message = login_miner(username, password)
-        if success:
-            st.session_state.current_user = username
-            st.success(message)
-        else:
-            st.error(message)
-
-# Aba: Mineração Inicial
-elif menu == "Mineração Inicial":
-    if not current_user:
-        st.error("Por favor, faça login para acessar esta funcionalidade.")
-    else:
-        st.header("Mineração Inicial")
-        if st.button("Iniciar Mineração Inicial"):
-            initial_transaction = Transaction("System", current_user, 100, "Mineração Inicial")
-            blockchain.add_transaction(initial_transaction)
-            success = blockchain.mine_pending_transactions(current_user)
-            if success:
-                st.success("Mineração inicial concluída! Você recebeu 100 BEAT.")
-            else:
-                st.warning("Erro durante a mineração inicial.")
-
-# Aba: Adicionar Transação
-elif menu == "Adicionar Transação":
-    if not current_user:
-        st.error("Por favor, faça login para acessar esta funcionalidade.")
-    else:
-        st.header("Adicionar Transação")
-        recipient = st.text_input("Destinatário:")
-        amount = st.number_input("Valor:", min_value=0.0, step=0.01)
-        description = st.text_area("Descrição:")
-        if st.button("Adicionar Transação"):
-            transaction = Transaction(current_user, recipient, amount, description)
-            added = blockchain.add_transaction(transaction)
-            if added:
-                st.success("Transação adicionada com sucesso!")
-            else:
-                st.error("Erro ao adicionar transação.")
-
-# Aba: Minerar Bloco
+# --- Menu: Minerar Bloco ---
 elif menu == "Minerar Bloco":
-    if not current_user:
-        st.error("Por favor, faça login para acessar esta funcionalidade.")
-    else:
-        st.header("Minerar Bloco")
-        if st.button("Minerar"):
-            success = blockchain.mine_pending_transactions(current_user)
-            if success:
-                st.success("Bloco minerado com sucesso! As transações pendentes foram incluídas no blockchain.")
-            else:
-                st.warning("Nenhuma transação pendente para minerar.")
+    st.header("Minerar Bloco")
+    miner_address = st.text_input("Endereço do Minerador:")
+    if st.button("Minerar"):
+        if blockchain.mine_pending_transactions(miner_address):
+            st.success("Bloco minerado com sucesso!")
+        else:
+            st.warning("Nenhuma transação pendente para minerar.")
 
-# Aba: Visualizar Blockchain
+# --- Menu: Visualizar Blockchain ---
 elif menu == "Visualizar Blockchain":
     st.header("Blockchain")
-    st.subheader("Transações Pendentes")
-    if len(blockchain.pending_transactions) > 0:
-        for tx in blockchain.pending_transactions:
-            st.write(f"- {tx}")
-    else:
-        st.write("Nenhuma transação pendente no momento.")
     st.subheader("Blocos Minerados")
     for block in blockchain.chain:
         st.subheader(f"Bloco {block.index}")
@@ -220,3 +138,26 @@ elif menu == "Visualizar Blockchain":
         for tx in block.transactions:
             st.write(f"- {tx}")
         st.write("---")
+
+# --- Menu: Estatísticas ---
+elif menu == "Estatísticas":
+    st.header("Estatísticas do Blockchain")
+    total_blocks = len(blockchain.chain)
+    total_transactions = sum(len(block.transactions) for block in blockchain.chain)
+    total_reward = sum(
+        tx.amount for block in blockchain.chain for tx in block.transactions if tx.sender == "System"
+    )
+    last_miner = blockchain.chain[-1].transactions[-1].recipient if len(blockchain.chain) > 1 else "Nenhum"
+
+    st.write(f"**Blocos Minerados:** {total_blocks}")
+    st.write(f"**Transações Realizadas:** {total_transactions}")
+    st.write(f"**Recompensa Total aos Mineradores:** {total_reward} BEAT")
+    st.write(f"**Último Minerador:** {last_miner}")
+
+# --- Menu: Validar Blockchain ---
+elif menu == "Validar Blockchain":
+    st.header("Validar Blockchain")
+    if blockchain.is_chain_valid():
+        st.success("O blockchain é válido!")
+    else:
+        st.error("O blockchain é inválido!")
